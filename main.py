@@ -262,7 +262,9 @@ class App(ctk.CTk):
                         if elapsed >= channel["cooldown"]:
                             should_post = True
                     
-                    if should_post:
+                    if not should_post:
+                        self.log(f"[{channel['name']}] 쿨타임 대기 중 (남은 시간: {channel['cooldown'] - elapsed:.1f}분)")
+                        continue
                         self.log(f"[{channel['name']}] 진입 중: {channel['url']}")
                         
                         try:

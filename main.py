@@ -258,11 +258,14 @@ class App(ctk.CTk):
                     
                     if last_post_str is None:
                         should_post = True
+                        self.log(f"[{channel['name']}] 쿨타임 없음 - 포스팅 가능")
                     else:
                         last_time = datetime.datetime.fromisoformat(last_post_str)
                         elapsed = (now - last_time).total_seconds() / 60
+                        self.log(f"[{channel['name']}] 마지막 포스팅: {last_post_str}, 경과시간: {elapsed:.1f}분, 쿨타임: {channel['cooldown']}분")
                         if elapsed >= channel["cooldown"]:
                             should_post = True
+                            self.log(f"[{channel['name']}] 쿨타임 완료 - 포스팅 가능")
                         else:
                             self.log(f"[{channel['name']}] 쿨타임 대기 중 (남은 시간: {channel['cooldown'] - elapsed:.1f}분)")
                     

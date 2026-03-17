@@ -246,9 +246,11 @@ class App(ctk.CTk):
             
             while self.bot.is_running:
                 now = datetime.datetime.now()
+                self.log(f"[정보] 채널 검사 시작 (총 {len(self.bot.data['channels'])}개 채널)")
                 
-                for channel in self.bot.data["channels"]:
+                for idx, channel in enumerate(self.bot.data["channels"], 1):
                     if not self.bot.is_running: break
+                    self.log(f"[{idx}/{len(self.bot.data['channels'])}] {channel['name']} 채널 처리 중...")
                     
                     # 쿨타임 체크 로직
                     should_post = False
@@ -309,15 +311,20 @@ class App(ctk.CTk):
                             raise Exception("입력창을 찾을 수 없습니다.")
                         
                         msg = self.bot.data["original_message"]
+                        self.log(f"[{channel['name']}] 메시지 입력 시작...")
                         await self.bot.human_type(input_element, msg)
+                        self.log(f"[{channel['name']}] 메시지 전송 완료")
                         
                         # 4. 결과 기록
                         channel["last_post"] = datetime.datetime.now().isoformat()
                         self.bot.save_config()
                         self.log(f"[{channel['name']}] 포스팅 완료 성공!")
                         
+                        # 다음 채널 처리 전 짧은 대기
+                        await asyncio.sleep(2)
+                        
                     except Exception as e:
-                        self.log(f"[{channel['name']}] 오류 발생: 입력창을 찾지 못했거나 전송에 실패했습니다.")
+                        self.log(f"[{channel['name']}] 오류 발생: {str(e)}")
                         # 실패 시 다음 주기에 다시 시도하도록 last_post를 업데이트하지 않음
                 
                 if self.bot.is_running:

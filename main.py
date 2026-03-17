@@ -298,14 +298,26 @@ class App(ctk.CTk):
                         
                         # 1. 채널 URL 이동
                         self.log(f"[{channel['name']}] 채널로 이동 중...")
-                        await page.goto(channel_url)
+                        try:
+                            await page.goto(channel_url, timeout=60000)  # 60초 타임아웃
+                            self.log(f"[{channel['name']}] 페이지 이동 성공")
+                        except Exception as goto_error:
+                            self.log(f"[{channel['name']}] 페이지 이동 실패: {str(goto_error)}")
+                            raise Exception(f"페이지 이동 실패: {str(goto_error)}")
                         
-                        # 페이지 로드 대기 (네트워크 idle 상태까지)
-                        await page.wait_for_load_state('networkidle')
-                        await asyncio.sleep(3)  # 추가 안정화 대기
+                        # 페이지 로드 대기 (더 짧은 타임아웃으로 변경)
+                        try:
+                            await page.wait_for_load_state('domcontentloaded', timeout=30000)
+                            self.log(f"[{channel['name']}] DOM 로드 완료")
+                        except Exception as load_error:
+                            self.log(f"[{channel['name']}] 페이지 로드 대기 실패: {str(load_error)}")
+                            # 로드 실패해도 계속 진행 (일부 페이지에서는 필요)
+                        
+                        await asyncio.sleep(2)  # 추가 안정화 대기
                         
                         # 채널 페이지가 제대로 로드되었는지 확인
                         current_url = page.url
+                        self.log(f"[{channel['name']}] 현재 URL: {current_url}")
                         if "web.telegram.org" not in current_url:
                             raise Exception(f"채널 페이지 로드 실패: {current_url}")
                         
@@ -328,11 +340,13 @@ class App(ctk.CTk):
                         input_element = None
                         for selector in input_selectors:
                             try:
-                                input_element = await page.wait_for_selector(selector, timeout=10000)  # 10초로 증가
+                                self.log(f"[{channel['name']}] {selector} 시도 중...")
+                                input_element = await page.wait_for_selector(selector, timeout=15000)  # 15초로 증가
                                 if input_element:
                                     self.log(f"[{channel['name']}] 입력창 발견: {selector}")
                                     break
-                            except:
+                            except Exception as selector_error:
+                                self.log(f"[{channel['name']}] {selector} 찾기 실패: {str(selector_error)}")
                                 continue
                         
                         if not input_element:
@@ -340,6 +354,8 @@ class App(ctk.CTk):
                             page_content = await page.content()
                             if "You can only post messages as admin" in page_content or "관리자만" in page_content:
                                 raise Exception("채널 관리자 권한이 필요합니다.")
+                            elif "channel" in page_content.lower() and "not found" in page_content.lower():
+                                raise Exception("채널을 찾을 수 없습니다.")
                             else:
                                 raise Exception("입력창을 찾을 수 없습니다.")
                         

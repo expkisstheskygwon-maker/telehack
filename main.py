@@ -294,8 +294,19 @@ class App(ctk.CTk):
                             continue
                         
                         # 1. 채널 URL 이동
+                        self.log(f"[{channel['name']}] 채널로 이동 중...")
                         await page.goto(channel_url)
-                        await asyncio.sleep(5) # 페이지 로딩 대기
+                        
+                        # 페이지 로드 대기 (네트워크 idle 상태까지)
+                        await page.wait_for_load_state('networkidle')
+                        await asyncio.sleep(3)  # 추가 안정화 대기
+                        
+                        # 채널 페이지가 제대로 로드되었는지 확인
+                        current_url = page.url
+                        if "web.telegram.org" not in current_url:
+                            raise Exception(f"채널 페이지 로드 실패: {current_url}")
+                        
+                        self.log(f"[{channel['name']}] 채널 페이지 로드 완료")
                         
                         # 2. 무작위 지터링 (사람처럼 보이기 위함)
                         jitter = random.randint(15, 45)
@@ -304,6 +315,7 @@ class App(ctk.CTk):
                         
                         # 3. 입력창 찾기 및 타이핑
                         # 텔레그램 웹 버전에 따라 셀렉터가 다를 수 있음
+                        self.log(f"[{channel['name']}] 입력창 찾는 중...")
                         input_selectors = [
                             "div.input-message-input",
                             "div[contenteditable='true']",
@@ -313,14 +325,20 @@ class App(ctk.CTk):
                         input_element = None
                         for selector in input_selectors:
                             try:
-                                input_element = await page.wait_for_selector(selector, timeout=5000)
+                                input_element = await page.wait_for_selector(selector, timeout=10000)  # 10초로 증가
                                 if input_element:
+                                    self.log(f"[{channel['name']}] 입력창 발견: {selector}")
                                     break
                             except:
                                 continue
                         
                         if not input_element:
-                            raise Exception("입력창을 찾을 수 없습니다.")
+                            # 입력창이 없으면 채널 권한이 없는 것일 수 있음
+                            page_content = await page.content()
+                            if "You can only post messages as admin" in page_content or "관리자만" in page_content:
+                                raise Exception("채널 관리자 권한이 필요합니다.")
+                            else:
+                                raise Exception("입력창을 찾을 수 없습니다.")
                         
                         msg = self.bot.data["original_message"]
                         self.log(f"[{channel['name']}] 메시지 입력 시작...")
@@ -332,8 +350,10 @@ class App(ctk.CTk):
                         self.bot.save_config()
                         self.log(f"[{channel['name']}] 포스팅 완료 성공!")
                         
-                        # 다음 채널 처리 전 짧은 대기
-                        await asyncio.sleep(2)
+                        # 다음 채널 처리 전 채널 전환 안정화 대기
+                        if idx < len(self.bot.data["channels"]):
+                            self.log(f"다음 채널로 전환 준비 중...")
+                            await asyncio.sleep(5)  # 채널 간 전환 대기
                         
                     except Exception as e:
                         self.log(f"[{channel['name']}] 오류 발생: {str(e)}")

@@ -37,12 +37,18 @@ class TelegramAutoBot:
 
     async def human_type(self, element, text):
         """사람이 타이핑하는 것처럼 글자 사이에 무작위 지연을 주어 입력합니다."""
-        await element.click()
-        for char in text:
-            # 글자당 0.05초 ~ 0.15초 사이의 무작위 지연
-            await element.type(char, delay=random.uniform(50, 150))
+        lines = text.split('\n')
+        for i, line in enumerate(lines):
+            for char in line:
+                # 글자당 0.05초 ~ 0.15초 사이의 무작위 지연
+                await element.type(char, delay=random.uniform(50, 150))
+            if i < len(lines) - 1:
+                # 줄바꿈: Shift + Enter
+                await element.press("Shift+Enter")
+            else:
+                # 마지막 줄: Enter로 전송
+                await element.press("Enter")
         await asyncio.sleep(random.uniform(0.5, 1.0))
-        await element.press("Enter")
 
 class App(ctk.CTk):
     """CustomTkinter 기반의 메인 GUI 클래스"""

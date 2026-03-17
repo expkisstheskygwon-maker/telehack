@@ -310,15 +310,15 @@ class App(ctk.CTk):
                         
                         msg = self.bot.data["original_message"]
                         await self.bot.human_type(input_element, msg)
-                            
-                            # 4. 결과 기록
-                            channel["last_post"] = datetime.datetime.now().isoformat()
-                            self.bot.save_config()
-                            self.log(f"[{channel['name']}] 포스팅 완료 성공!")
-                            
-                        except Exception as e:
-                            self.log(f"[{channel['name']}] 오류 발생: 입력창을 찾지 못했거나 전송에 실패했습니다.")
-                            # 실패 시 다음 주기에 다시 시도하도록 last_post를 업데이트하지 않음
+                        
+                        # 4. 결과 기록
+                        channel["last_post"] = datetime.datetime.now().isoformat()
+                        self.bot.save_config()
+                        self.log(f"[{channel['name']}] 포스팅 완료 성공!")
+                        
+                    except Exception as e:
+                        self.log(f"[{channel['name']}] 오류 발생: 입력창을 찾지 못했거나 전송에 실패했습니다.")
+                        # 실패 시 다음 주기에 다시 시도하도록 last_post를 업데이트하지 않음
                 
                 if self.bot.is_running:
                     self.log("모든 채널 검사 완료. 1분 후 다시 확인합니다.")

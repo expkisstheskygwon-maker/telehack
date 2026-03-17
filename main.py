@@ -191,39 +191,52 @@ class App(ctk.CTk):
     async def automation_worker(self):
         """Playwright 기반의 실제 자동화 작업 루프"""
         async with async_playwright() as p:
+            page = None
+            browser = None
+            cdp_connected = False
+            
             try:
-                # 기존 텔레그램 앱 브라우저에 연결 (디버깅 포트 9222 사용)
+                # 기존 텔레그램 앱 브라우저에 연결 시도 (디버깅 포트 9222 사용)
                 browser = await p.chromium.connect_over_cdp("http://localhost:9222")
+                cdp_connected = True
                 self.log("기존 텔레그램 브라우저에 연결되었습니다.")
                 
                 # 기존 컨텍스트와 페이지를 사용
                 contexts = browser.contexts
                 if not contexts:
-                    self.log("텔레그램 브라우저에 컨텍스트가 없습니다. 텔레그램 앱이 실행 중인지 확인하세요.")
-                    return
+                    raise Exception("텔레그램 브라우저에 컨텍스트가 없습니다.")
                 
                 context = contexts[0]
                 pages = context.pages
                 if not pages:
-                    self.log("텔레그램 브라우저에 페이지가 없습니다.")
-                    return
+                    raise Exception("텔레그램 브라우저에 페이지가 없습니다.")
                 
                 # 텔레그램 웹 페이지 찾기 (URL에 'web.telegram.org' 포함)
-                page = None
                 for p in pages:
                     if "web.telegram.org" in p.url:
                         page = p
                         break
                 
                 if not page:
-                    self.log("텔레그램 웹 페이지를 찾을 수 없습니다. 텔레그램 웹이 열려 있는지 확인하세요.")
-                    return
+                    raise Exception("텔레그램 웹 페이지를 찾을 수 없습니다. 텔레그램 웹이 열려 있는지 확인하세요.")
                 
                 self.log("텔레그램 웹 페이지에 연결되었습니다. 자동화 시작.")
                 
             except Exception as e:
-                self.log(f"브라우저 연결 실패: {str(e)}. 텔레그램 앱이 --remote-debugging-port=9222로 실행 중인지 확인하세요.")
-                return
+                self.log(f"기존 브라우저 연결 실패: {str(e)}")
+                self.log("새 브라우저를 열어 텔레그램 웹에 연결합니다.")
+                
+                # Fallback: 새로운 브라우저 실행
+                browser = await p.chromium.launch(headless=False)
+                context = await browser.new_context()
+                page = await context.new_page()
+                
+                # 텔레그램 웹으로 이동
+                await page.goto("https://web.telegram.org/")
+                self.log("새 브라우저가 실행되었습니다. 텔레그램 웹에 로그인해주세요.")
+                
+                # 로그인 대기 (수동)
+                await asyncio.sleep(10)  # 사용자가 로그인할 시간 제공
             
             while self.bot.is_running:
                 now = datetime.datetime.now()
@@ -277,7 +290,9 @@ class App(ctk.CTk):
                     self.log("모든 채널 검사 완료. 1분 후 다시 확인합니다.")
                     await asyncio.sleep(60)
 
-            # 기존 브라우저는 닫지 않음
+            # CDP 연결이 아니면 브라우저 닫기
+            if not cdp_connected and browser:
+                await browser.close()
             self.log("자동화 세션이 종료되었습니다.")
 
 if __name__ == "__main__":

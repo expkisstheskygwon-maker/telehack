@@ -46,7 +46,11 @@
 
 3. 좌측 패널에서 채널을 추가하세요:
    - 채널 별칭
-   - 텔레그램 웹 URL (예: https://web.telegram.org/k/#-123456789 또는 https://web.telegram.org/k/#@channelname)
+   - 텔레그램 채널 주소 (다음 형식 중 하나):
+     - `@channelname` (예: @dofaminegood)
+     - `channelname` (예: dofaminegood)
+     - `https://t.me/channelname` (예: https://t.me/dofaminegood)
+     - `https://web.telegram.org/k/#@channelname` (예: https://web.telegram.org/k/#@dofaminegood)
    - 쿨타임 (분 단위)
 
 4. "자동 홍보 시작"을 클릭하여 봇을 시작하세요. 봇이 기존 텔레그램 앱의 세션에 연결되거나, 새 브라우저를 열어 텔레그램 웹에 연결됩니다.
@@ -55,13 +59,10 @@
 
 - 텔레그램의 이용 약관을 준수하세요. 자동화는 계정 정지에 이어질 수 있습니다.
 - 채널에 메시지를 포스팅하려면 해당 채널의 관리자 권한이 필요하며, 채널에 가입되어 있어야 합니다.
-- 채널 URL은 텔레그램 웹에서 채널을 열 때의 URL을 사용하세요 (t.me 링크는 자동 변환됩니다).
+- 채널 주소는 다양한 형식을 지원합니다: `@channelname`, `channelname`, `https://t.me/channelname`, `https://web.telegram.org/k/#@channelname`
 - 입력창이 없으면 포스팅할 수 없습니다. 채널 권한을 확인하세요.
 - 설정은 `telegram_config.json`에 저장됩니다.
 
 ## 라이선스
 
 이 프로젝트는 개인용으로만 사용하세요.
-=======
-# telehack
->>>>>>> 78e1cd483312c1d708b4d394bed67c7a86e56c0f

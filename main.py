@@ -272,12 +272,24 @@ class App(ctk.CTk):
                     self.log(f"[{channel['name']}] 진입 중: {channel['url']}")
                     
                     try:
-                        # URL 변환: t.me 링크를 web.telegram.org로 변환
-                        channel_url = channel["url"]
-                        if channel_url.startswith("https://t.me/"):
+                        # URL 변환: 다양한 형식의 채널 주소를 web.telegram.org로 변환
+                        channel_url = channel["url"].strip()
+                        
+                        # 형식 1: @username 형식
+                        if channel_url.startswith("@"):
+                            username = channel_url[1:]  # @ 제거
+                            channel_url = f"https://web.telegram.org/k/#@{username}"
+                        # 형식 2: username 형식 (@ 없음, URL도 아님)
+                        elif not channel_url.startswith("https://") and "@" not in channel_url:
+                            channel_url = f"https://web.telegram.org/k/#@{channel_url}"
+                        # 형식 3: https://t.me/ 형식
+                        elif channel_url.startswith("https://t.me/"):
                             username = channel_url.replace("https://t.me/", "").split("/")[0]  # / 이후 제거
                             channel_url = f"https://web.telegram.org/k/#@{username}"
-                        elif not channel_url.startswith("https://web.telegram.org/"):
+                        # 형식 4: 이미 https://web.telegram.org/ 형식
+                        elif channel_url.startswith("https://web.telegram.org/"):
+                            pass  # 그대로 사용
+                        else:
                             self.log(f"[{channel['name']}] URL 형식이 올바르지 않습니다: {channel_url}")
                             continue
                         

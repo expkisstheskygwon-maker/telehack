@@ -35,14 +35,14 @@ class TelegramAutoBot:
         with open(self.config_file, "w", encoding="utf-8") as f:
             json.dump(self.data, f, ensure_ascii=False, indent=4)
 
-    async def human_type(self, page, selector, text):
+    async def human_type(self, element, text):
         """사람이 타이핑하는 것처럼 글자 사이에 무작위 지연을 주어 입력합니다."""
-        await page.click(selector)
+        await element.click()
         for char in text:
             # 글자당 0.05초 ~ 0.15초 사이의 무작위 지연
-            await page.type(selector, char, delay=random.uniform(50, 150))
+            await element.type(char, delay=random.uniform(50, 150))
         await asyncio.sleep(random.uniform(0.5, 1.0))
-        await page.keyboard.press("Enter")
+        await element.press("Enter")
 
 class App(ctk.CTk):
     """CustomTkinter 기반의 메인 GUI 클래스"""
@@ -260,8 +260,17 @@ class App(ctk.CTk):
                         self.log(f"[{channel['name']}] 진입 중: {channel['url']}")
                         
                         try:
+                            # URL 변환: t.me 링크를 web.telegram.org로 변환
+                            channel_url = channel["url"]
+                            if channel_url.startswith("https://t.me/"):
+                                username = channel_url.replace("https://t.me/", "").split("/")[0]  # / 이후 제거
+                                channel_url = f"https://web.telegram.org/k/#@{username}"
+                            elif not channel_url.startswith("https://web.telegram.org/"):
+                                self.log(f"[{channel['name']}] URL 형식이 올바르지 않습니다: {channel_url}")
+                                continue
+                            
                             # 1. 채널 URL 이동
-                            await page.goto(channel["url"])
+                            await page.goto(channel_url)
                             await asyncio.sleep(5) # 페이지 로딩 대기
                             
                             # 2. 무작위 지터링 (사람처럼 보이기 위함)
@@ -270,12 +279,27 @@ class App(ctk.CTk):
                             await asyncio.sleep(jitter)
                             
                             # 3. 입력창 찾기 및 타이핑
-                            # 텔레그램 웹 K/A 버전에 따라 셀렉터가 다를 수 있음
-                            input_selector = "div.input-message-input" 
-                            await page.wait_for_selector(input_selector, timeout=15000)
+                            # 텔레그램 웹 버전에 따라 셀렉터가 다를 수 있음
+                            input_selectors = [
+                                "div.input-message-input",
+                                "div[contenteditable='true']",
+                                "textarea",
+                                ".input-message-input"
+                            ]
+                            input_element = None
+                            for selector in input_selectors:
+                                try:
+                                    input_element = await page.wait_for_selector(selector, timeout=5000)
+                                    if input_element:
+                                        break
+                                except:
+                                    continue
+                            
+                            if not input_element:
+                                raise Exception("입력창을 찾을 수 없습니다.")
                             
                             msg = self.bot.data["original_message"]
-                            await self.bot.human_type(page, input_selector, msg)
+                            await self.bot.human_type(input_element, msg)
                             
                             # 4. 결과 기록
                             channel["last_post"] = datetime.datetime.now().isoformat()
